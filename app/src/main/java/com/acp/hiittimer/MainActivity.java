@@ -1,10 +1,10 @@
 package com.acp.hiittimer;
 
+import android.app.Activity;
 import android.media.MediaPlayer;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Message;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -13,7 +13,7 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     private static final int EXERCISE_STEP_WARMUP = 0;
     private static final int EXERCISE_STEP_HIGH = 1;
     private static final int EXERCISE_STEP_LOW = 2;
