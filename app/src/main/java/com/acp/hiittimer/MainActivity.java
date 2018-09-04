@@ -62,49 +62,36 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        mSetText = (TextView) findViewById(R.id.set_text);
-        mExerciseText = (TextView) findViewById(R.id.exercise_text);
-        mStepText = (TextView) findViewById(R.id.step_text);
-        mTimerText = (TextView) findViewById(R.id.timer_text);
-        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
-        mStartButton = (Button) findViewById(R.id.start_button);
-        mStopButton = (Button) findViewById(R.id.stop_button);
-        mResetButton = (Button) findViewById(R.id.reset_button);
+        mSetText = findViewById(R.id.set_text);
+        mExerciseText = findViewById(R.id.exercise_text);
+        mStepText = findViewById(R.id.step_text);
+        mTimerText = findViewById(R.id.timer_text);
+        mProgressBar = findViewById(R.id.progressBar);
+        mStartButton = findViewById(R.id.start_button);
+        mStopButton = findViewById(R.id.stop_button);
+        mResetButton = findViewById(R.id.reset_button);
 
-        mStartButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mIsRunning = true;
-                Message m = mHandler.obtainMessage();
-                mHandler.sendMessage(m);
-                updateButtons(false, true, false);
-            }
+        mStartButton.setOnClickListener(view -> {
+            mIsRunning = true;
+            Message m = mHandler.obtainMessage();
+            mHandler.sendMessage(m);
+            updateButtons(false, true, false);
         });
-        mStopButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                mIsRunning = false;
-                mTimer.cancel();
-                mTimer = null;
-                updateButtons(true, false, true);
-            }
+        mStopButton.setOnClickListener(view -> {
+            mIsRunning = false;
+            mTimer.cancel();
+            mTimer = null;
+            updateButtons(true, false, true);
         });
-        mResetButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                initSession();
-                updateButtons(true, false, false);
-            }
+        mResetButton.setOnClickListener(view -> {
+            initSession();
+            updateButtons(true, false, false);
         });
 
         mMediaPlayer = MediaPlayer.create(this, R.raw.alarm);
-        mMediaPlayer.setOnCompletionListener(new MediaPlayer
-                .OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mediaPlayer) {
-                mIsAlarmActive = false;
-            }
-        });
+        mMediaPlayer.setOnCompletionListener(mediaPlayer ->
+                mIsAlarmActive = false
+        );
 
         if (savedInstanceState != null) {
             mSetCounter = savedInstanceState.getInt("mSetCounter");

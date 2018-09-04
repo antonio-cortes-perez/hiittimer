@@ -1,5 +1,4 @@
 apply plugin: 'com.android.application'
-
 android {
     buildToolsVersion "28.0.2"
     compileSdkVersion 28
@@ -10,4 +9,11 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
 }
