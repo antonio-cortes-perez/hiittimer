@@ -1,15 +1,19 @@
 package com.acp.hiittimer;
 
 import android.app.Activity;
+import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -18,6 +22,7 @@ import java.util.List;
 public class MainActivity extends Activity {
     private static final String TAG = "HIITTimer";
     private static final long UPDATE_INTERVAL_MS = 200;
+    private static final int ID_FIRST_ROW = 12345;
 
     // State variables
     private int mStep;
@@ -27,14 +32,11 @@ public class MainActivity extends Activity {
     private final List<Step> mSteps = new ArrayList<>();
 
     // UI variables
-    private TextView mSetText;
-    private TextView mExerciseText;
-    private TextView mStepText;
-    private TextView mTimerText;
-    private ProgressBar mProgressBar;
     Button mStartButton;
     Button mStopButton;
     Button mResetButton;
+    private ProgressBar mProgressBar;
+    private TableLayout mTableSteps;
 
     private ExerciseTimer mTimer;
     private MediaPlayer mMediaPlayer;
@@ -48,6 +50,7 @@ public class MainActivity extends Activity {
     private static class Step {
         long duration;
         String label;
+
         Step(long duration, String label) {
             this.duration = duration;
             this.label = label;
@@ -60,14 +63,11 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        mSetText = findViewById(R.id.set_text);
-        mExerciseText = findViewById(R.id.exercise_text);
-        mStepText = findViewById(R.id.step_text);
-        mTimerText = findViewById(R.id.timer_text);
-        mProgressBar = findViewById(R.id.progressBar);
         mStartButton = findViewById(R.id.start_button);
         mStopButton = findViewById(R.id.stop_button);
         mResetButton = findViewById(R.id.reset_button);
+        mProgressBar = findViewById(R.id.progressBar);
+        mTableSteps = findViewById(R.id.table_steps);
 
         mStartButton.setOnClickListener(view -> {
             mIsRunning = true;
@@ -101,6 +101,7 @@ public class MainActivity extends Activity {
                     ("stopButtonEnabled"));
             mResetButton.setEnabled(savedInstanceState.getBoolean
                     ("resetButtonEnabled"));
+            initSteps();
             if (mIsRunning) {
                 Log.d(TAG, "OnCreate IsRunning");
                 createTimer();
@@ -147,14 +148,15 @@ public class MainActivity extends Activity {
     }
 
     private void initSession() {
-        initSteps();
         mStep = 0;
         mIsRunning = false;
+        initSteps();
         updateUI(mSteps.get(mStep).duration);
         updateButtons(true, false, false);
     }
 
     private void initSteps() {
+        mSteps.clear();
         mSteps.add(new Step(15000, "Low"));
         mSteps.add(new Step(45000, "High"));
         mSteps.add(new Step(15000, "Low"));
@@ -169,8 +171,32 @@ public class MainActivity extends Activity {
         mSteps.add(new Step(45000, "High"));
         mSteps.add(new Step(15000, "Low"));
         mSteps.add(new Step(45000, "High"));
+        mTableSteps.removeAllViews();
+        int i = 0;
+        for (Step step : mSteps) {
+            // Compose objects.
+            TableRow tr = new TableRow(this);
+            TextView time = new TextView(this);
+            TextView label = new TextView(this);
+            tr.addView(time);
+            tr.addView(label);
+            mTableSteps.addView(tr);
+            // Setup properties.
+            tr.setPadding(0, 5, 0, 5);
+            tr.setBackgroundColor(i % 2 == 0 ? Color.WHITE : Color.LTGRAY);
+            tr.setId(ID_FIRST_ROW + i++);
+            time.setText(
+                    String.valueOf(Math.round((float) step.duration / 1000)));
+            time.setTextSize(TypedValue.COMPLEX_UNIT_SP, 35);
+            time.setWidth(Math.round(
+                    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 90,
+                            getResources().getDisplayMetrics())));
+            time.setBackgroundColor(Color.TRANSPARENT);
+            label.setText(step.label);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 35);
+            label.setBackgroundColor(Color.TRANSPARENT);
+        }
     }
-
 
     private void createTimer() {
         Log.d(TAG, toString());
@@ -194,9 +220,16 @@ public class MainActivity extends Activity {
 
     private void updateUI(long timeLeft) {
         mTimeLeft = timeLeft;
-        mStepText.setText(mSteps.get(mStep).label);
-        mTimerText.setText(String.valueOf(Math.round((float) timeLeft / 1000)));
-        mProgressBar.setProgress((int) (timeLeft * 100 / mSteps.get(mStep).duration));
+        if (mStep > 0) {
+            int prevRowIndex = mStep - 1;
+            findViewById(ID_FIRST_ROW + prevRowIndex).setBackgroundColor(getRowColor(prevRowIndex));
+        }
+        if (mStep < mSteps.size()) {
+            mProgressBar.setProgress((int) (timeLeft * 100 / mSteps.get(mStep).duration));
+            findViewById(ID_FIRST_ROW + mStep).setBackgroundColor(Color.GREEN);
+        } else {
+            mProgressBar.setProgress(0);
+        }
     }
 
     private void updateButtons(boolean startButtonEnabled, boolean
@@ -204,6 +237,10 @@ public class MainActivity extends Activity {
         mStartButton.setEnabled(startButtonEnabled);
         mStopButton.setEnabled(stopButtonEnabled);
         mResetButton.setEnabled(resetButtonEnabled);
+    }
+
+    private int getRowColor(int row) {
+        return row % 2 == 0 ? Color.WHITE : Color.LTGRAY;
     }
 
     private class ExerciseTimer extends CountDownTimer {
