@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.CountDownTimer;
-import android.os.Handler;
-import android.os.Message;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -16,6 +14,7 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,12 +39,6 @@ public class MainActivity extends Activity {
 
     private ExerciseTimer mTimer;
     private MediaPlayer mMediaPlayer;
-    private final Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            createTimer();
-        }
-    };
 
     private static class Step {
         long duration;
@@ -71,8 +64,7 @@ public class MainActivity extends Activity {
 
         mStartButton.setOnClickListener(view -> {
             mIsRunning = true;
-            Message m = mHandler.obtainMessage();
-            mHandler.sendMessage(m);
+            createTimer();
             updateButtons(false, true, false);
         });
         mStopButton.setOnClickListener(view -> {
@@ -183,7 +175,7 @@ public class MainActivity extends Activity {
             mTableSteps.addView(tr);
             // Setup properties.
             tr.setPadding(0, 5, 0, 5);
-            tr.setBackgroundColor(i % 2 == 0 ? Color.WHITE : Color.LTGRAY);
+            tr.setBackgroundColor(getRowColor(i));
             tr.setId(ID_FIRST_ROW + i++);
             time.setText(
                     String.valueOf(Math.round((float) step.duration / 1000)));
@@ -205,7 +197,7 @@ public class MainActivity extends Activity {
             updateUI(0);
             updateButtons(false, false, true);
         } else {
-            mTimer = new ExerciseTimer(mTimeLeft, UPDATE_INTERVAL_MS);
+            mTimer = new ExerciseTimer(mTimeLeft, UPDATE_INTERVAL_MS, this);
             updateUI(mTimeLeft);
             mTimer.start();
         }
@@ -216,10 +208,15 @@ public class MainActivity extends Activity {
         if (mStep < mSteps.size()) {
             mTimeLeft = mSteps.get(mStep).duration;
         }
+        createTimer();
     }
 
     private void updateUI(long timeLeft) {
         mTimeLeft = timeLeft;
+        if (mTimeLeft > 4000 && mTimeLeft < 4500 && !mIsAlarmActive) {
+            mIsAlarmActive = true;
+            mMediaPlayer.start();
+        }
         if (mStep > 0) {
             int prevRowIndex = mStep - 1;
             findViewById(ID_FIRST_ROW + prevRowIndex).setBackgroundColor(getRowColor(prevRowIndex));
@@ -243,26 +240,29 @@ public class MainActivity extends Activity {
         return row % 2 == 0 ? Color.WHITE : Color.LTGRAY;
     }
 
-    private class ExerciseTimer extends CountDownTimer {
+    private static class ExerciseTimer extends CountDownTimer {
+        private WeakReference<MainActivity> mainActivity;
 
-        public ExerciseTimer(long millisInFuture, long countDownInterval) {
+        public ExerciseTimer(long millisInFuture, long countDownInterval,
+                             MainActivity activity) {
             super(millisInFuture, countDownInterval);
+            this.mainActivity = new WeakReference<>(activity);
         }
 
         @Override
         public void onTick(long l) {
-            updateUI(l);
-            if (l > 4000 && l < 4500 && !mIsAlarmActive) {
-                mIsAlarmActive = true;
-                mMediaPlayer.start();
+            MainActivity activity = mainActivity.get();
+            if (activity != null) {
+                activity.updateUI(l);
             }
         }
 
         @Override
         public void onFinish() {
-            setNextStep();
-            Message m = mHandler.obtainMessage();
-            mHandler.sendMessage(m);
+            MainActivity activity = mainActivity.get();
+            if (activity != null) {
+                activity.setNextStep();
+            }
         }
     }
 }
