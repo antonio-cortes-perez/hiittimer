@@ -14,6 +14,9 @@ import android.widget.TableLayout;
 import android.widget.TableRow;
 import android.widget.TextView;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -98,7 +101,7 @@ public class MainActivity extends Activity {
                 Log.d(TAG, "OnCreate IsRunning");
                 createTimer();
             } else {
-                updateUI(mTimeLeft);
+                updateUI();
             }
         } else {
             initSession();
@@ -140,53 +143,53 @@ public class MainActivity extends Activity {
     }
 
     private void initSession() {
-        mStep = 0;
-        mIsRunning = false;
         initSteps();
-        updateUI(mSteps.get(mStep).duration);
+        mStep = 0;
+        mTimeLeft = mSteps.get(mStep).duration;
+        mIsRunning = false;
+        updateUI();
         updateButtons(true, false, false);
     }
 
     private void initSteps() {
         mSteps.clear();
-        mSteps.add(new Step(15000, "Low"));
-        mSteps.add(new Step(45000, "High"));
-        mSteps.add(new Step(15000, "Low"));
-        mSteps.add(new Step(45000, "High"));
-        mSteps.add(new Step(15000, "Low"));
-        mSteps.add(new Step(45000, "High"));
-        mSteps.add(new Step(15000, "Low"));
-        mSteps.add(new Step(45000, "High"));
-        mSteps.add(new Step(15000, "Low"));
-        mSteps.add(new Step(45000, "High"));
-        mSteps.add(new Step(15000, "Low"));
-        mSteps.add(new Step(45000, "High"));
-        mSteps.add(new Step(15000, "Low"));
-        mSteps.add(new Step(45000, "High"));
         mTableSteps.removeAllViews();
-        int i = 0;
-        for (Step step : mSteps) {
-            // Compose objects.
-            TableRow tr = new TableRow(this);
-            TextView time = new TextView(this);
-            TextView label = new TextView(this);
-            tr.addView(time);
-            tr.addView(label);
-            mTableSteps.addView(tr);
-            // Setup properties.
-            tr.setPadding(0, 5, 0, 5);
-            tr.setBackgroundColor(getRowColor(i));
-            tr.setId(ID_FIRST_ROW + i++);
-            time.setText(
-                    String.valueOf(Math.round((float) step.duration / 1000)));
-            time.setTextSize(TypedValue.COMPLEX_UNIT_SP, 35);
-            time.setWidth(Math.round(
-                    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 90,
-                            getResources().getDisplayMetrics())));
-            time.setBackgroundColor(Color.TRANSPARENT);
-            label.setText(step.label);
-            label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 35);
-            label.setBackgroundColor(Color.TRANSPARENT);
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(
+                        getResources().openRawResource(
+                                getResources().getIdentifier("default_steps", "raw", getPackageName()))));
+        try {
+            String line;
+            int i = 0;
+            while ((line = reader.readLine()) != null) {
+                String[] pair = line.trim().split(",");
+                long duration = Long.valueOf(pair[0]) * 1000;
+                String label = pair[1];
+                mSteps.add(new Step(duration, label));
+                // Compose objects.
+                TableRow tr = new TableRow(this);
+                TextView tvTime = new TextView(this);
+                TextView tvLabel = new TextView(this);
+                tr.addView(tvTime);
+                tr.addView(tvLabel);
+                mTableSteps.addView(tr);
+                // Setup properties.
+                tr.setPadding(0, 5, 0, 5);
+                tr.setBackgroundColor(getRowColor(i));
+                tr.setId(ID_FIRST_ROW + i++);
+                tvTime.setText(
+                        String.valueOf(Math.round((float) duration / 1000)));
+                tvTime.setTextSize(TypedValue.COMPLEX_UNIT_SP, 35);
+                tvTime.setWidth(Math.round(
+                        TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 90,
+                                getResources().getDisplayMetrics())));
+                tvTime.setBackgroundColor(Color.TRANSPARENT);
+                tvLabel.setText(label);
+                tvLabel.setTextSize(TypedValue.COMPLEX_UNIT_SP, 35);
+                tvLabel.setBackgroundColor(Color.TRANSPARENT);
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "initSteps", e);
         }
     }
 
@@ -194,11 +197,12 @@ public class MainActivity extends Activity {
         Log.d(TAG, toString());
         if (mStep >= mSteps.size()) {
             mTimer = null;
-            updateUI(0);
+            mTimeLeft = 0;
+            updateUI();
             updateButtons(false, false, true);
         } else {
             mTimer = new ExerciseTimer(mTimeLeft, UPDATE_INTERVAL_MS, this);
-            updateUI(mTimeLeft);
+            updateUI();
             mTimer.start();
         }
     }
@@ -211,18 +215,17 @@ public class MainActivity extends Activity {
         createTimer();
     }
 
-    private void updateUI(long timeLeft) {
-        mTimeLeft = timeLeft;
+    private void updateUI() {
         if (mTimeLeft > 4000 && mTimeLeft < 4500 && !mIsAlarmActive) {
             mIsAlarmActive = true;
-            mMediaPlayer.start();
+            //mMediaPlayer.start();
         }
         if (mStep > 0) {
             int prevRowIndex = mStep - 1;
             findViewById(ID_FIRST_ROW + prevRowIndex).setBackgroundColor(getRowColor(prevRowIndex));
         }
         if (mStep < mSteps.size()) {
-            mProgressBar.setProgress((int) (timeLeft * 100 / mSteps.get(mStep).duration));
+            mProgressBar.setProgress((int) (mTimeLeft * 100 / mSteps.get(mStep).duration));
             findViewById(ID_FIRST_ROW + mStep).setBackgroundColor(Color.GREEN);
         } else {
             mProgressBar.setProgress(0);
@@ -253,7 +256,8 @@ public class MainActivity extends Activity {
         public void onTick(long l) {
             MainActivity activity = mainActivity.get();
             if (activity != null) {
-                activity.updateUI(l);
+                activity.mTimeLeft = l;
+                activity.updateUI();
             }
         }
 
