@@ -1,6 +1,8 @@
 package com.acp.hiittimer;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.CountDownTimer;
@@ -17,12 +19,14 @@ import android.widget.TextView;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends Activity {
     private static final String TAG = "HIITTimer";
+    private static final String PREF_KEY = "STEPS";
     private static final long UPDATE_INTERVAL_MS = 200;
     private static final int ID_FIRST_ROW = 12345;
 
@@ -42,6 +46,7 @@ public class MainActivity extends Activity {
 
     private ExerciseTimer mTimer;
     private MediaPlayer mMediaPlayer;
+    private SharedPreferences preferences;
 
     private static class Step {
         long duration;
@@ -86,7 +91,17 @@ public class MainActivity extends Activity {
                 mIsAlarmActive = false
         );
 
-        if (savedInstanceState != null) {
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
+        preferences = getPreferences(MODE_PRIVATE);
+
+        if (Intent.ACTION_SEND.equals(action) && "text/plain".equals(type)) {
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putString(PREF_KEY, intent.getStringExtra(Intent.EXTRA_TEXT));
+            editor.commit();
+            initSession();
+        } else if (savedInstanceState != null) {
             mStep = savedInstanceState.getInt("mStep");
             mIsRunning = savedInstanceState.getBoolean("mIsRunning");
             mTimeLeft = savedInstanceState.getLong("mTimeLeft");
@@ -154,17 +169,32 @@ public class MainActivity extends Activity {
     private void initSteps() {
         mSteps.clear();
         mTableSteps.removeAllViews();
-        BufferedReader reader = new BufferedReader(
-                new InputStreamReader(
-                        getResources().openRawResource(
-                                getResources().getIdentifier("default_steps", "raw", getPackageName()))));
+        BufferedReader reader;
+        String steps = preferences.getString(PREF_KEY, "");
+        if (steps.isEmpty()) {
+            reader = new BufferedReader(new InputStreamReader(
+                    getResources().openRawResource(
+                            getResources().getIdentifier("default_steps", "raw", getPackageName()))));
+        } else {
+            reader = new BufferedReader(new StringReader(steps));
+        }
         try {
             String line;
             int i = 0;
             while ((line = reader.readLine()) != null) {
                 String[] pair = line.trim().split(",");
-                long duration = Long.valueOf(pair[0]) * 1000;
-                String label = pair[1];
+                if (pair.length != 2) {
+                    Log.w(TAG, "invalid entry: " + line);
+                    continue;
+                }
+                long duration;
+                try {
+                    duration = Long.valueOf(pair[0].trim()) * 1000;
+                } catch (NumberFormatException e) {
+                    Log.w(TAG, "invalid duration", e);
+                    continue;
+                }
+                String label = pair[1].trim();
                 mSteps.add(new Step(duration, label));
                 // Compose objects.
                 TableRow tr = new TableRow(this);
@@ -189,7 +219,7 @@ public class MainActivity extends Activity {
                 tvLabel.setBackgroundColor(Color.TRANSPARENT);
             }
         } catch (IOException e) {
-            Log.e(TAG, "initSteps", e);
+            Log.w(TAG, "initSteps", e);
         }
     }
 
@@ -218,7 +248,7 @@ public class MainActivity extends Activity {
     private void updateUI() {
         if (mTimeLeft > 4000 && mTimeLeft < 4500 && !mIsAlarmActive) {
             mIsAlarmActive = true;
-            //mMediaPlayer.start();
+            mMediaPlayer.start();
         }
         if (mStep > 0) {
             int prevRowIndex = mStep - 1;
