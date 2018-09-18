@@ -97,11 +97,13 @@ public class MainActivity extends Activity {
         preferences = getPreferences(MODE_PRIVATE);
 
         if (Intent.ACTION_SEND.equals(action) && "text/plain".equals(type)) {
+            Log.d(TAG, "Intent.ACTIONS_SEND");
             SharedPreferences.Editor editor = preferences.edit();
             editor.putString(PREF_KEY, intent.getStringExtra(Intent.EXTRA_TEXT));
             editor.commit();
             initSession();
         } else if (savedInstanceState != null) {
+            Log.d(TAG, "savedInstanceState");
             mStep = savedInstanceState.getInt("mStep");
             mIsRunning = savedInstanceState.getBoolean("mIsRunning");
             mTimeLeft = savedInstanceState.getLong("mTimeLeft");
@@ -125,7 +127,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        Log.d(TAG, "saving state");
+        Log.d(TAG, "saving state: " + this);
         super.onSaveInstanceState(outState);
         outState.putInt("mStep", mStep);
         outState.putBoolean("mIsRunning", mIsRunning);
