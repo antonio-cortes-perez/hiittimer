@@ -91,18 +91,9 @@ public class MainActivity extends Activity {
                 mIsAlarmActive = false
         );
 
-        Intent intent = getIntent();
-        String action = intent.getAction();
-        String type = intent.getType();
         preferences = getPreferences(MODE_PRIVATE);
-
-        if (Intent.ACTION_SEND.equals(action) && "text/plain".equals(type)) {
-            Log.d(TAG, "Intent.ACTIONS_SEND");
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putString(PREF_KEY, intent.getStringExtra(Intent.EXTRA_TEXT));
-            editor.commit();
-            initSession();
-        } else if (savedInstanceState != null) {
+        processIntent();
+        if (savedInstanceState != null) {
             Log.d(TAG, "savedInstanceState");
             mStep = savedInstanceState.getInt("mStep");
             mIsRunning = savedInstanceState.getBoolean("mIsRunning");
@@ -141,9 +132,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         Log.d(TAG, "OnDestroy");
         super.onDestroy();
-        if (mTimer != null) {
-            mTimer.cancel();
-        }
+        destroyTimer();
         mMediaPlayer.release();
     }
 
@@ -159,11 +148,24 @@ public class MainActivity extends Activity {
         return sb.toString();
     }
 
+    private void processIntent() {
+        Intent intent = getIntent();
+        String action = intent.getAction();
+        String type = intent.getType();
+        if (Intent.ACTION_SEND.equals(action) && "text/plain".equals(type)) {
+            Log.d(TAG, "Intent.ACTIONS_SEND");
+            SharedPreferences.Editor editor = preferences.edit();
+            editor.putString(PREF_KEY, intent.getStringExtra(Intent.EXTRA_TEXT));
+            editor.commit();
+        }
+    }
+
     private void initSession() {
         initSteps();
         mStep = 0;
         mTimeLeft = mSteps.get(mStep).duration;
         mIsRunning = false;
+        destroyTimer();
         updateUI();
         updateButtons(true, false, false);
     }
@@ -228,7 +230,7 @@ public class MainActivity extends Activity {
     private void createTimer() {
         Log.d(TAG, toString());
         if (mStep >= mSteps.size()) {
-            mTimer = null;
+            destroyTimer();
             mTimeLeft = 0;
             updateUI();
             updateButtons(false, false, true);
@@ -236,6 +238,13 @@ public class MainActivity extends Activity {
             mTimer = new ExerciseTimer(mTimeLeft, UPDATE_INTERVAL_MS, this);
             updateUI();
             mTimer.start();
+        }
+    }
+
+    private void destroyTimer() {
+        if (mTimer != null) {
+            mTimer.cancel();
+            mTimer = null;
         }
     }
 
@@ -271,7 +280,7 @@ public class MainActivity extends Activity {
         mResetButton.setEnabled(resetButtonEnabled);
     }
 
-    private int getRowColor(int row) {
+    private static int getRowColor(int row) {
         return row % 2 == 0 ? Color.WHITE : Color.LTGRAY;
     }
 
